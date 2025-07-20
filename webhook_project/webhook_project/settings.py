@@ -74,23 +74,24 @@ WSGI_APPLICATION = 'webhook_project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'webhooks_db',
+        'USER': 'root',
+        'PASSWORD': 'root',
+        'HOST': '127.0.0.1',
+        'PORT': '3307',
     }
 }
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'webhook_prod',   # You can create this DB later
-#         'USER': 'root',
-#         'PASSWORD': '8310299076',
-#         'HOST': '127.0.0.1',       # Use 127.0.0.1 not localhost
-#         'PORT': '3307',            # Port mapped from Docker
-#     }
-# }
 
 
 
