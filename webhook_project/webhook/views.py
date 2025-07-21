@@ -14,7 +14,7 @@ def webhook_receiver(request):
     except json.JSONDecodeError:
         data = {}
 
-    print("Webhook payload received:", data)
+    # print("Webhook payload received:", data)
 
     # Save raw data to DB
     RawWebhookLog.objects.create(data=data)
