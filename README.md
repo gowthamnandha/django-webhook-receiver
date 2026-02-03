@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a simple Django project designed to receive webhook payloads, log them into a MySQL database, and expose a webhook endpoint locally using ngrok.
+This is a Django project designed to receive webhook payloads, validate and authenticate them, log them into a MySQL database, and expose webhook endpoints locally using ngrok. It supports provider-specific endpoints, request validation, rate limiting, and async processing.
 
 ## Prerequisites
 
@@ -92,6 +92,48 @@ python manage.py migrate
 
 ```bash
 python manage.py runserver
+```
+
+## Webhook Endpoints
+
+- Default endpoint: `POST /webhook/`
+- Provider endpoint: `POST /webhook/<provider>/` (e.g., `/webhook/github/`, `/webhook/stripe/`)
+
+## Security & Validation
+
+- **HMAC signature validation** using provider-specific secrets.
+- **Payload schema checks** using required fields per provider.
+- **Rate limiting** using Django cache.
+- **Correlation IDs** are assigned per request (`X-Correlation-ID`).
+
+Configure provider settings in `WEBHOOK_PROVIDERS` within `settings.py` or via environment variables:
+
+```python
+WEBHOOK_PROVIDERS = {
+    "github": {
+        "secret": os.environ.get("WEBHOOK_GITHUB_SECRET", "change-me"),
+        "signature_header": "X-Hub-Signature-256",
+        "event_type_header": "X-GitHub-Event",
+        "required_fields": ["repository", "sender"],
+        "rate_limit": {"max_requests": 120, "window_seconds": 60},
+    },
+}
+```
+
+## Async Processing
+
+Webhook events are stored immediately and processed asynchronously using a lightweight thread pool. Disable async by setting:
+
+```bash
+export WEBHOOK_ASYNC_ENABLED=0
+```
+
+## Admin Dashboard
+
+Use Django admin to browse webhook events:
+
+```
+http://localhost:8000/admin/
 ```
 
 ## Ngrok Setup

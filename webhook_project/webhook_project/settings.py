@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+import sys
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +27,7 @@ SECRET_KEY = 'django-insecure-uo2ng7*7sc05qx2t&5c=!3z#+mk+&t!9zy&rqz+#(6ydh)f)$p
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"] 
+ALLOWED_HOSTS = ["*"]
 
 CSRF_TRUSTED_ORIGINS = [
     'https://*.ngrok-free.app',
@@ -54,6 +56,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'webhook.middleware.NgrokBypassMiddleware',
+    'webhook.middleware.CorrelationIdMiddleware',
 ]
 
 ROOT_URLCONF = 'webhook_project.urls'
@@ -79,25 +83,26 @@ WSGI_APPLICATION = 'webhook_project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
+USE_SQLITE = 'test' in sys.argv or os.environ.get('USE_SQLITE_FOR_TESTS') == '1'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'webhooks_db',
-        'USER': 'root',
-        'PASSWORD': 'root',
-        'HOST': '127.0.0.1',
-        'PORT': '3307',
+if USE_SQLITE:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
-
-
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'webhooks_db',
+            'USER': 'root',
+            'PASSWORD': 'root',
+            'HOST': '127.0.0.1',
+            'PORT': '3307',
+        }
+    }
 
 
 # Password validation
@@ -140,3 +145,62 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "webhook-cache",
+    }
+}
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "loggers": {
+        "webhook": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
+    },
+}
+
+WEBHOOK_PROVIDERS = {
+    "default": {
+        "secret": os.environ.get("WEBHOOK_DEFAULT_SECRET", "change-me"),
+        "signature_header": "X-Signature",
+        "event_type_header": "X-Event-Type",
+        "required_fields": [],
+        "rate_limit": {
+            "max_requests": 60,
+            "window_seconds": 60,
+        },
+    },
+    "github": {
+        "secret": os.environ.get("WEBHOOK_GITHUB_SECRET", "change-me"),
+        "signature_header": "X-Hub-Signature-256",
+        "event_type_header": "X-GitHub-Event",
+        "required_fields": ["repository", "sender"],
+        "rate_limit": {
+            "max_requests": 120,
+            "window_seconds": 60,
+        },
+    },
+    "stripe": {
+        "secret": os.environ.get("WEBHOOK_STRIPE_SECRET", "change-me"),
+        "signature_header": "Stripe-Signature",
+        "event_type_header": "type",
+        "required_fields": ["id", "type"],
+        "rate_limit": {
+            "max_requests": 120,
+            "window_seconds": 60,
+        },
+    },
+}
+
+WEBHOOK_ASYNC_ENABLED = os.environ.get("WEBHOOK_ASYNC_ENABLED", "1") == "1"
